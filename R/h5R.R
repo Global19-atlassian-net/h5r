@@ -610,16 +610,34 @@ setMethod("ls", "H5Obj", function(name) {
   names(listH5Contents(name))
 })
 
+
+.h5ObjectExists <- function(h5Obj, name) {
+    .Call("h5R_dataset_exists", .ePtr(h5Obj), name)
+}
+
+.walk <- function(path) {
+    segments <- strsplit(path, "/")[[1]]
+    x <- sapply(1:length(segments),
+                function(n) { do.call(paste, c(as.list(segments[1:n]), sep="/")) })
+    x[x!=""]
+}
+
 h5ObjectExists <- function(h5Obj, name) {
-  .Call("h5R_dataset_exists", .ePtr(h5Obj), name)
+    ## Walk the "directory" hierarchy, checking each link in order
+    ## Necessary because methods like H5Lexists don't handle this for us
+    for (subpath in .walk(name)) {
+        v <- .h5ObjectExists(h5Obj, subpath)
+        if (!v) { return(v); }
+    }
+    return(TRUE);
 }
 
 h5GroupExists <- function(h5Obj, name) {
-  .Call("h5R_dataset_exists", .ePtr(h5Obj), name)
+  h5ObjectExists(h5Obj, name)
 }
 
 h5DatasetExists <- function(h5Obj, name) {
-  .Call("h5R_dataset_exists", .ePtr(h5Obj), name)
+  h5ObjectExists(h5Obj, name)
 }
 
 h5AttributeExists <- function(h5Obj, name) {
